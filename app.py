@@ -1,37 +1,39 @@
 import streamlit as st
+import qrcode
+from io import BytesIO
+from PIL import Image
 
-# Configuración del título de la página web
-st.set_page_config(page_title="Citogenética Vegetal", page_icon="🧬")
+# ... (tus campos de texto anteriores) ...
 
-st.title("🧬 Gestión de Cromosomas - FISH & DAPI")
-st.write("Bienvenido al sistema de trazabilidad de preparados citogenéticos.")
-
-# Creamos dos pestañas en la interfaz web
-pestana_registro, pestana_buscar = st.tabs(["📋 Registrar Nueva Muestra", "🔍 Escanear / Buscar Historial"])
-
-# --- PESTAÑA 1: REGISTRO ---
-with pestana_registro:
-    st.header("Ingreso de Datos del Preparado")
+if st.button("Guardar Muestra y Generar QR"):
+    # 1. Agrupamos la información que irá dentro del QR
+    contenido_qr = f"""
+    ID: {especie}
+    Fijador: {fijador}
+    Sonda: {sonda}
+    DAPI: {dapi}
+    Notas: {notas}
+    """
     
-    # Campos de texto para que el usuario complete
-    especie = st.text_input("Especie o Variedad de la Planta (Ej: Zea mays):")
-    protocolo = st.selectbox("Protocolo de Fijación:", ["Fijador Farmer (3:1)", "Carnoy", "Otro"])
-    sonda = st.text_input("Sonda de Hibridación (FISH):")
-    dapi = st.checkbox("¿Aplicó tinción de contraste DAPI?")
-    notas = st.text_area("Notas adicionales o modificaciones del protocolo:")
+    # 2. Generamos el QR
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(contenido_qr)
+    qr.make(fit=True)
+    img_qr = qr.make_image(fill_color="black", back_color="white")
     
-    # Botón para guardar
-    botón_guardar = st.button("Guardar Muestra y Generar QR")
+    # 3. Convertimos la imagen para que Streamlit la muestre
+    buf = BytesIO()
+    img_qr.save(buf, format="PNG")
+    byte_im = buf.getvalue()
     
-    if botón_guardar:
-        st.success(f"¡Hiciste clic en guardar! (Próximamente procesaremos a: {especie})")
-
-# --- PESTAÑA 2: BUSCADOR ---
-with pestana_buscar:
-    st.header("Trazabilidad Hacia Atrás")
-    st.write("Escribe el código de la muestra o usa el lector para ver el historial.")
+    # 4. Mostramos el resultado
+    st.success("✅ ¡Código generado con éxito!")
+    st.image(byte_im, caption=f"QR para la muestra {especie}", width=300)
     
-    codigo_escaner = st.text_input("Código de la Muestra (Ej: CROMO-001):")
-    
-    if codigo_escaner:
-        st.info(f"Buscando el historial para el código: {codigo_escaner}...")
+    # 5. Botón para descargar e imprimir
+    st.download_button(
+        label="Descargar código QR para imprimir",
+        data=byte_im,
+        file_name=f"QR_{especie}.png",
+        mime="image/png"
+    )
